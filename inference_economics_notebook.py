@@ -16,6 +16,12 @@ from typing import Callable
 from copy import deepcopy
 import matplotlib.cm as cm
 
+try:
+    from tqdm.auto import tqdm
+except ImportError:  # pragma: no cover - tqdm is optional
+    def tqdm(x, *args, **kwargs):
+        return x
+
 # ## Language model and GPU definitions
 # 
 # This section contains a transformer class and a GPU class, along with object definitions for important models and GPUs. Details such as whether a GPU should be assumed to have a kernel launch latency or what the latency structure of GPU collectives is like are also handled here.
@@ -1451,9 +1457,12 @@ def pareto_fronts(comparison_list: list[TokenEconSettings], token_latency_second
     gpu_counts = []
     batch_sizes = []
 
-    token_latency_seconds_range = np.min(token_latency_seconds_array) * np.logspace(0, 2, base=10, num=1000) # ranges from max speed/100 to max speed
+    token_latency_seconds_range = np.min(token_latency_seconds_array) * np.logspace(0, 2, base=10, num=1000)  # ranges from max speed/100 to max speed
 
-    for token_latency_seconds_sample in token_latency_seconds_range:
+    for token_latency_seconds_sample in tqdm(
+        token_latency_seconds_range,
+        desc=f"Pareto {comparison_setting.name}",
+    ):
       indices = np.where((token_latency_seconds_array <= token_latency_seconds_sample) & (batch_size_array/token_latency_seconds_array <= max_throughput_tokens_per_second))
       if len(indices[0]) > 0:
         minimal_cost = np.min(gpu_seconds_per_token[indices])
