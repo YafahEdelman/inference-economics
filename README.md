@@ -7,6 +7,10 @@ The `inference_economics_notebook.py` script now includes a helper function
 that a provided cost and throughput pair lies on the model's cost-throughput
 frontier.  The function can be imported and used directly in other scripts.
 
+## Installation
+
+Run `./install.sh` to install the Python dependencies using `pip`.
+
 Additional helper scripts:
 - `scaled_curve_helpers.py` provides utilities to scale a model so that it matches a desired cost/throughput pair and to plot cost-throughput curves.
 - `generate_scaled_curves.py` demonstrates how to scale DeepSeek_V3, Llama 3 405B and GPT-4 to pass through the GPT-4.1 API point (110 tok/s, 8 USD per million tokens) and writes the resulting scalings to `gpt4o_scalings.txt`.
