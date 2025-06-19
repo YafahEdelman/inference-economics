@@ -1427,6 +1427,9 @@ tpu_test = ComparisonSettings([TokenEconSettings(name="Llama 3.1 405B", gpu=TPU_
 def pareto_fronts(comparison_list: list[TokenEconSettings], token_latency_seconds_func, use_pp=False):
   token_economics_results = []
 
+  total_iterations = len(comparison_list) * 1000  # each comparison uses 1000 samples
+  overall_progress = tqdm(total=total_iterations, desc="Overall progress", position=0)
+
   for comparison_setting in comparison_list:
     gpu = comparison_setting.gpu
     model = comparison_setting.model
@@ -1462,6 +1465,8 @@ def pareto_fronts(comparison_list: list[TokenEconSettings], token_latency_second
     for token_latency_seconds_sample in tqdm(
         token_latency_seconds_range,
         desc=f"Pareto {comparison_setting.name}",
+        position=1,
+        leave=False,
     ):
       indices = np.where((token_latency_seconds_array <= token_latency_seconds_sample) & (batch_size_array/token_latency_seconds_array <= max_throughput_tokens_per_second))
       if len(indices[0]) > 0:
@@ -1474,7 +1479,7 @@ def pareto_fronts(comparison_list: list[TokenEconSettings], token_latency_second
           token_latency_valid.append(token_latency_found)
           gpu_counts.append(n_gpu_array[np.where(gpu_seconds_per_token == minimal_cost)][found_index])
           batch_sizes.append(batch_size_array[np.where(gpu_seconds_per_token == minimal_cost)][found_index])
-
+      overall_progress.update(1)
     token_latency_valid = np.array(token_latency_valid)
     pareto_front_gpu_seconds_per_token = np.array(pareto_front_gpu_seconds_per_token)
 
@@ -1485,6 +1490,7 @@ def pareto_fronts(comparison_list: list[TokenEconSettings], token_latency_second
     mfu_values = model.arithmetic_cost_flop(input_len, np.array(batch_sizes))/(np.array(gpu_counts)*gpu.theoretical_flop_per_second[model.weight_precision_bytes*8]*token_latency_valid)
     token_economics_results.append((x_coords, y_coords, gpu_counts, batch_sizes, mfu_values))
 
+  overall_progress.close()
   return token_economics_results
 
 # In[257]:
