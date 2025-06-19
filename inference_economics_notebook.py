@@ -1424,11 +1424,24 @@ tpu_test = ComparisonSettings([TokenEconSettings(name="Llama 3.1 405B", gpu=TPU_
                              "token_economics_tpu_test",
                              "Token economics of Llama 3.1 405B on TPU v4")
 
-def pareto_fronts(comparison_list: list[TokenEconSettings], token_latency_seconds_func, use_pp=False):
+def pareto_fronts(
+    comparison_list: list[TokenEconSettings],
+    token_latency_seconds_func,
+    use_pp: bool = False,
+    overall_progress=None,
+):
+  """Compute Pareto fronts for ``comparison_list``.
+
+  If ``overall_progress`` is ``None`` a new :class:`tqdm` progress bar is
+  created. Otherwise, the provided progress bar is updated.
+  """
+
   token_economics_results = []
 
   total_iterations = len(comparison_list) * 1000  # each comparison uses 1000 samples
-  overall_progress = tqdm(total=total_iterations, desc="Overall progress", position=0)
+  owns_progress = overall_progress is None
+  if owns_progress:
+    overall_progress = tqdm(total=total_iterations, desc="Overall progress", position=0)
 
   for comparison_setting in comparison_list:
     gpu = comparison_setting.gpu
@@ -1490,7 +1503,8 @@ def pareto_fronts(comparison_list: list[TokenEconSettings], token_latency_second
     mfu_values = model.arithmetic_cost_flop(input_len, np.array(batch_sizes))/(np.array(gpu_counts)*gpu.theoretical_flop_per_second[model.weight_precision_bytes*8]*token_latency_valid)
     token_economics_results.append((x_coords, y_coords, gpu_counts, batch_sizes, mfu_values))
 
-  overall_progress.close()
+  if owns_progress:
+    overall_progress.close()
   return token_economics_results
 
 # In[257]:
