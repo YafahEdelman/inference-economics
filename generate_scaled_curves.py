@@ -1,6 +1,12 @@
 from scaled_curve_helpers import scale_to_gpt4o, curve_for_model, plot_curves
 from inference_economics_notebook import DeepSeek_V3, Llama_3_405B, GPT_4
 
+try:
+    from tqdm.auto import tqdm
+except ImportError:  # pragma: no cover - optional dependency
+    def tqdm(x, *args, **kwargs):
+        return x
+
 models = {
     "DeepSeek_V3": (DeepSeek_V3, "red"),
     "Llama 3 405B": (Llama_3_405B, "blue"),
@@ -9,7 +15,7 @@ models = {
 
 scaled_info = {}
 scalings = {}
-for name, (model, color) in models.items():
+for name, (model, color) in tqdm(models.items(), desc="Models"):
     scaled, factor = scale_to_gpt4o(model)
     scalings[name] = (factor, scaled.total_params)
     x, y = curve_for_model(scaled, name, color)
