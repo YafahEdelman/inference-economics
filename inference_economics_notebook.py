@@ -545,8 +545,8 @@ def collective_latency_nccl_seconds(nRanks, nNodes, coll="allreduce", algo="LL",
       raise ValueError("Algorithm code given to collective_latency_nccl_seconds is invalid.")
 
 def mean_collective_time_nccl_seconds(nRanks, nNodes, bytes_reduced, gpu: GPU, coll="allreduce", latency_bw_weights=(1, 1), ll_base_latency_seconds=6.8e-6, ll128_base_latency_seconds=14e-6, overlap_comms=True):
-    result = np.infty * np.ones(shape=np.shape(nRanks))
-    weighted_result = np.infty * np.ones(shape=np.shape(nRanks))
+    result = np.inf * np.ones(shape=np.shape(nRanks))
+    weighted_result = np.inf * np.ones(shape=np.shape(nRanks))
 
     assert np.all(nNodes <= np.maximum(1, nRanks)) and np.all(nNodes >= nRanks/gpu.node_size)
 
@@ -730,7 +730,7 @@ TPU_v4 = GPU(name="TPU v4",
              hbm_size_bytes=32e9,
              l2_cache_size_bytes=5e4,
              l2_bandwidth_Bps=6.44e12,
-             intranode_allreduce_bandwidth_Bps=np.infty,
+             intranode_allreduce_bandwidth_Bps=np.inf,
              internode_allreduce_bandwidth_Bps=2.5e11,
              node_size=1,
              price_dollars_per_hour=1,
@@ -742,8 +742,8 @@ Groq_LPU = GPU(name="Groq LPU",
                hbm_bandwidth_Bps=8e13,
                hbm_size_bytes=230e6,
                l2_cache_size_bytes=0,
-               l2_bandwidth_Bps=np.infty,
-               intranode_allreduce_bandwidth_Bps=np.infty,
+               l2_bandwidth_Bps=np.inf,
+               intranode_allreduce_bandwidth_Bps=np.inf,
                internode_allreduce_bandwidth_Bps=330e9/2,
                node_size=1,
                price_dollars_per_hour=1,
@@ -1120,13 +1120,13 @@ def search_for_model(base_model: Model, approx_model: Model, gpu: GPU, acceptanc
       N_GPU, batch_size, latency_seconds = spec_dec_mfu_target_opt(target_mfu, current_model, approx_model, gpu, acceptance_prob, gamma_max, input_len)
       tok_per_sec = 1/latency_seconds
 
-      print("%.2e" % (current_model.total_params), tok_per_sec, "GPUs: %.2f" % (N_GPU), "batch size: %.2f" % (batch_size))
-
-      if tok_per_sec < target_tok_per_sec:
-         high = mid
-      else:
-         low = mid
-
+#      print("%.2e" % (current_model.total_params), tok_per_sec, "GPUs: %.2f" % (N_GPU), "batch size: %.2f" % (batch_size))
+#
+#      if tok_per_sec < target_tok_per_sec:
+#         high = mid
+#      else:
+#         low = mid
+#
    return current_model, N_GPU, batch_size
 
 def scale_model_for_cost_bandwidth(target_cost: float,
@@ -1208,46 +1208,46 @@ def scale_model_for_cost_bandwidth(target_cost: float,
 input_len = 100000
 output_len = 1
 
-batch_size = 400
-
-model_obj = DeepSeek_V3
-approx_model_obj = Llama_3_8B_MQA
-gpu = H100
-n_gpu = 128
-
-#ttft_seconds = model_obj.arithmetic_cost_flop(0, input_len*batch_size)/(n_gpu*gpu.flop_per_second[8*model_obj.weight_precision_bytes])
-#ttft_seconds = token_latency_seconds_default(np.array([n_gpu]), model_obj, gpu, np.array([batch_size]), \
-#                                              input_len=0, seq_len=input_len)
-ttft_seconds = 0
-output_tok_latency_seconds = spec_dec_token_latency_seconds(np.array([n_gpu]), model_obj, approx_model_obj, gpu, np.array([batch_size]), \
-                                                            acceptance_prob=0.8, gamma_max=4, input_len=input_len, use_pp=True)
-
-total_latency_seconds = ttft_seconds + output_len*output_tok_latency_seconds
-
-print("Tokens per second:", output_len/total_latency_seconds)
-print("Requests per second:", batch_size/total_latency_seconds)
-print("Throughput (overall tok/s):", output_len*batch_size/total_latency_seconds)
-print("Throughput per GPU (overall tok/s):", output_len*batch_size/(total_latency_seconds*n_gpu))
-print("Total latency:", total_latency_seconds)
-print("Utilization rate:", (0*model_obj.arithmetic_cost_flop(0, input_len*batch_size) + model_obj.arithmetic_cost_flop(input_len, output_len*batch_size))
-                            /(n_gpu*gpu.theoretical_flop_per_second[8*model_obj.weight_precision_bytes]*total_latency_seconds))
-print("Price per M output tokens (USD):", 1e6 * gpu.price_dollars_per_hour / (3600*output_len*batch_size/(total_latency_seconds*n_gpu)))
-print("Output token latency (seconds):", output_tok_latency_seconds)
+##batch_size = 400
+##
+##model_obj = DeepSeek_V3
+##approx_model_obj = Llama_3_8B_MQA
+##gpu = H100
+##n_gpu = 128
+##
+###ttft_seconds = model_obj.arithmetic_cost_flop(0, input_len*batch_size)/(n_gpu*gpu.flop_per_second[8*model_obj.weight_precision_bytes])
+###ttft_seconds = token_latency_seconds_default(np.array([n_gpu]), model_obj, gpu, np.array([batch_size]), \
+###                                              input_len=0, seq_len=input_len)
+##ttft_seconds = 0
+##output_tok_latency_seconds = spec_dec_token_latency_seconds(np.array([n_gpu]), model_obj, approx_model_obj, gpu, np.array([batch_size]), \
+##                                                            acceptance_prob=0.8, gamma_max=4, input_len=input_len, use_pp=True)
+##
+##total_latency_seconds = ttft_seconds + output_len*output_tok_latency_seconds
+##
+##print("Tokens per second:", output_len/total_latency_seconds)
+##print("Requests per second:", batch_size/total_latency_seconds)
+##print("Throughput (overall tok/s):", output_len*batch_size/total_latency_seconds)
+##print("Throughput per GPU (overall tok/s):", output_len*batch_size/(total_latency_seconds*n_gpu))
+##print("Total latency:", total_latency_seconds)
+##print("Utilization rate:", (0*model_obj.arithmetic_cost_flop(0, input_len*batch_size) + model_obj.arithmetic_cost_flop(input_len, output_len*batch_size))
+##                            /(n_gpu*gpu.theoretical_flop_per_second[8*model_obj.weight_precision_bytes]*total_latency_seconds))
+##print("Price per M output tokens (USD):", 1e6 * gpu.price_dollars_per_hour / (3600*output_len*batch_size/(total_latency_seconds*n_gpu)))
+#print("Output token latency (seconds):", output_tok_latency_seconds)
 
 # In[365]:
 
 
-print("%.2e" % (DeepSeek_V3.arithmetic_cost_flop(input_len, batch_size)/DeepSeek_V3.memory_reads_writes_bytes(input_len, batch_size, 1, 1)))
-
-# In[430]:
-
-
-print("%.2e" % ((DeepSeek_V3.memory_reads_writes_bytes(input_len, batch_size, 1, 1)/(n_gpu*gpu.hbm_bandwidth_Bps))**(-1)))
-
-# In[427]:
-
-
-print("%.2e" % (DeepSeek_V3.kv_cache_size_per_input_bytes*1e5))
+#print("%.2e" % (DeepSeek_V3.arithmetic_cost_flop(input_len, batch_size)/DeepSeek_V3.memory_reads_writes_bytes(input_len, batch_size, 1, 1)))
+#
+## In[430]:
+#
+#
+#print("%.2e" % ((DeepSeek_V3.memory_reads_writes_bytes(input_len, batch_size, 1, 1)/(n_gpu*gpu.hbm_bandwidth_Bps))**(-1)))
+#
+## In[427]:
+#
+#
+#print("%.2e" % (DeepSeek_V3.kv_cache_size_per_input_bytes*1e5))
 
 # ## Token economics plots
 # 
@@ -1269,7 +1269,7 @@ class TokenEconSettings:
   spec_dec: bool
   acceptance_prob: float
 
-  def __init__(self, name, gpu, model, input_len=0, max_throughput_tokens_per_second=np.infty, observed_perf=None, color="", spec_dec=False, approx_model=None, acceptance_prob=1):
+  def __init__(self, name, gpu, model, input_len=0, max_throughput_tokens_per_second=np.inf, observed_perf=None, color="", spec_dec=False, approx_model=None, acceptance_prob=1):
     self.name = name
     self.gpu = gpu
     self.model = model
@@ -1318,31 +1318,31 @@ all_models_comparison_with_spec_dec = ComparisonSettings([TokenEconSettings(name
                     "token_economics_all_models_comparison_with_spec_dec",
                     "Token economics of all models on the H100 SXM with speculative decoding")
 
-gpus_comparison = ComparisonSettings([TokenEconSettings(name="H100", gpu=H100, model=Llama_3_70B_8_bit, input_len=0, max_throughput_tokens_per_second=np.infty, color="blue"),
-                                      #TokenEconSettings(name="H800", gpu=H800, model=Llama_3_70B, input_len=0, max_throughput_tokens_per_second=np.infty, color="cyan"),
-                   TokenEconSettings(name="A100", gpu=A100, model=Llama_3_70B_8_bit, input_len=0, max_throughput_tokens_per_second=np.infty, color="green"),
-                   TokenEconSettings(name="V100", gpu=V100, model=Llama_3_70B_8_bit, input_len=0, max_throughput_tokens_per_second=np.infty, color="red"),
-                   # TokenEconSettings(name="Groq LPU", gpu=Groq_LPU, model=Llama_3_405B_8_bit, input_len=0, max_throughput_tokens_per_second=np.infty, color="purple"),
-                   #TokenEconSettings(name="H20", gpu=H20, model=Llama_3_405B_8_bit, input_len=0, max_throughput_tokens_per_second=np.infty, color="gray"),
-                   #TokenEconSettings(name="H200", gpu=H200, model=Llama_3_405B_8_bit, input_len=0, max_throughput_tokens_per_second=np.infty, color="black")],
+gpus_comparison = ComparisonSettings([TokenEconSettings(name="H100", gpu=H100, model=Llama_3_70B_8_bit, input_len=0, max_throughput_tokens_per_second=np.inf, color="blue"),
+                                      #TokenEconSettings(name="H800", gpu=H800, model=Llama_3_70B, input_len=0, max_throughput_tokens_per_second=np.inf, color="cyan"),
+                   TokenEconSettings(name="A100", gpu=A100, model=Llama_3_70B_8_bit, input_len=0, max_throughput_tokens_per_second=np.inf, color="green"),
+                   TokenEconSettings(name="V100", gpu=V100, model=Llama_3_70B_8_bit, input_len=0, max_throughput_tokens_per_second=np.inf, color="red"),
+                   # TokenEconSettings(name="Groq LPU", gpu=Groq_LPU, model=Llama_3_405B_8_bit, input_len=0, max_throughput_tokens_per_second=np.inf, color="purple"),
+                   #TokenEconSettings(name="H20", gpu=H20, model=Llama_3_405B_8_bit, input_len=0, max_throughput_tokens_per_second=np.inf, color="gray"),
+                   #TokenEconSettings(name="H200", gpu=H200, model=Llama_3_405B_8_bit, input_len=0, max_throughput_tokens_per_second=np.inf, color="black")],
 ],
                    "token_economics_gpus_comparison",
                    "Token economics of Llama 3 70B (8-bit quantization) on different GPUs")
 
-gpus_long_context_comparison = ComparisonSettings([TokenEconSettings(name="H100", gpu=H100, model=Llama_3_405B_8_bit, input_len=1e5, max_throughput_tokens_per_second=np.infty, color="blue"),
-                                      TokenEconSettings(name="H800", gpu=H800, model=Llama_3_405B_8_bit, input_len=1e5, max_throughput_tokens_per_second=np.infty, color="cyan"),
-                   TokenEconSettings(name="A100", gpu=A100, model=Llama_3_405B_8_bit, input_len=1e5, max_throughput_tokens_per_second=np.infty, color="green"),
-                   TokenEconSettings(name="V100", gpu=V100, model=Llama_3_405B_8_bit, input_len=1e5, max_throughput_tokens_per_second=np.infty, color="red"),
-                   # TokenEconSettings(name="Groq LPU", gpu=Groq_LPU, model=Llama_3_405B_8_bit, input_len=0, max_throughput_tokens_per_second=np.infty, color="purple"),
-                   TokenEconSettings(name="H20", gpu=H20, model=Llama_3_405B_8_bit, input_len=1e5, max_throughput_tokens_per_second=np.infty, color="gray"),
-                   TokenEconSettings(name="H200", gpu=H200, model=Llama_3_405B_8_bit, input_len=1e5, max_throughput_tokens_per_second=np.infty, color="black")],
+gpus_long_context_comparison = ComparisonSettings([TokenEconSettings(name="H100", gpu=H100, model=Llama_3_405B_8_bit, input_len=1e5, max_throughput_tokens_per_second=np.inf, color="blue"),
+                                      TokenEconSettings(name="H800", gpu=H800, model=Llama_3_405B_8_bit, input_len=1e5, max_throughput_tokens_per_second=np.inf, color="cyan"),
+                   TokenEconSettings(name="A100", gpu=A100, model=Llama_3_405B_8_bit, input_len=1e5, max_throughput_tokens_per_second=np.inf, color="green"),
+                   TokenEconSettings(name="V100", gpu=V100, model=Llama_3_405B_8_bit, input_len=1e5, max_throughput_tokens_per_second=np.inf, color="red"),
+                   # TokenEconSettings(name="Groq LPU", gpu=Groq_LPU, model=Llama_3_405B_8_bit, input_len=0, max_throughput_tokens_per_second=np.inf, color="purple"),
+                   TokenEconSettings(name="H20", gpu=H20, model=Llama_3_405B_8_bit, input_len=1e5, max_throughput_tokens_per_second=np.inf, color="gray"),
+                   TokenEconSettings(name="H200", gpu=H200, model=Llama_3_405B_8_bit, input_len=1e5, max_throughput_tokens_per_second=np.inf, color="black")],
                    "token_economics_gpus_long_context_comparison",
                    "Token economics of Llama 3 405B on different GPUs (long context)")
 
 
-context_length_comparison = ComparisonSettings([TokenEconSettings(name="Empty context", gpu=H100, model=Llama_3_70B_8_bit, input_len=0, max_throughput_tokens_per_second=np.infty, color="blue"),
-                             TokenEconSettings(name="Context of 1K tokens", gpu=H100, model=Llama_3_70B_8_bit, input_len=1000, max_throughput_tokens_per_second=np.infty, color="green"),
-                             TokenEconSettings(name="Context of 10K tokens", gpu=H100, model=Llama_3_70B_8_bit, input_len=10000, max_throughput_tokens_per_second=np.infty, color="red")],
+context_length_comparison = ComparisonSettings([TokenEconSettings(name="Empty context", gpu=H100, model=Llama_3_70B_8_bit, input_len=0, max_throughput_tokens_per_second=np.inf, color="blue"),
+                             TokenEconSettings(name="Context of 1K tokens", gpu=H100, model=Llama_3_70B_8_bit, input_len=1000, max_throughput_tokens_per_second=np.inf, color="green"),
+                             TokenEconSettings(name="Context of 10K tokens", gpu=H100, model=Llama_3_70B_8_bit, input_len=10000, max_throughput_tokens_per_second=np.inf, color="red")],
                              "token_economics_context_length_comparison",
                              "Token economics of Llama 3 70B on different context lengths")
 
@@ -1359,20 +1359,20 @@ spec_dec_comparison = ComparisonSettings([TokenEconSettings(name="Llama 3 70B (8
                        "token_economics_spec_dec_comparison",
                        "Token economics of Llama models on different spec dec settings")
 
-mistral_large_comparison = ComparisonSettings([TokenEconSettings(name="Short context", gpu=H100, model=Mistral_Large_2, input_len=0, max_throughput_tokens_per_second=np.infty, color="red"),
+mistral_large_comparison = ComparisonSettings([TokenEconSettings(name="Short context", gpu=H100, model=Mistral_Large_2, input_len=0, max_throughput_tokens_per_second=np.inf, color="red"),
                                                TokenEconSettings(name="Short context with speculative decoding", gpu=H100, model=Mistral_Large_2, \
-                                              approx_model=Llama_3_8B_MQA, spec_dec=True, acceptance_prob=0.8, input_len=0, max_throughput_tokens_per_second=np.infty, color="darkred"),
-                            TokenEconSettings(name="Long context", gpu=H100, model=Mistral_Large_2, input_len=100000, max_throughput_tokens_per_second=np.infty, color="blue"),
+                                              approx_model=Llama_3_8B_MQA, spec_dec=True, acceptance_prob=0.8, input_len=0, max_throughput_tokens_per_second=np.inf, color="darkred"),
+                            TokenEconSettings(name="Long context", gpu=H100, model=Mistral_Large_2, input_len=100000, max_throughput_tokens_per_second=np.inf, color="blue"),
                             TokenEconSettings(name="Long context with speculative decoding", gpu=H100, model=Mistral_Large_2, \
-                                              approx_model=Llama_3_8B_MQA, spec_dec=True, acceptance_prob=0.8, input_len=100000, max_throughput_tokens_per_second=np.infty, color="darkblue")],
+                                              approx_model=Llama_3_8B_MQA, spec_dec=True, acceptance_prob=0.8, input_len=100000, max_throughput_tokens_per_second=np.inf, color="darkblue")],
                             "token_economics_mistral_large_comparison",
                             "Token economics of Mistral Large 2 on different context lengths")
-deepseek_v3_context_len_comparison = ComparisonSettings([TokenEconSettings(name="Short context", gpu=H100, model=DeepSeek_V3, input_len=0, max_throughput_tokens_per_second=np.infty, color="red"),
+deepseek_v3_context_len_comparison = ComparisonSettings([TokenEconSettings(name="Short context", gpu=H100, model=DeepSeek_V3, input_len=0, max_throughput_tokens_per_second=np.inf, color="red"),
                                                          TokenEconSettings(name="Short context with speculative decoding", gpu=H100, model=DeepSeek_V3, \
-                                              approx_model=Llama_3_8B_MQA, spec_dec=True, acceptance_prob=0.8, input_len=0, max_throughput_tokens_per_second=np.infty, color="darkred"),
-                            TokenEconSettings(name="Long context", gpu=H100, model=DeepSeek_V3, input_len=100000, max_throughput_tokens_per_second=np.infty, color="blue"),
+                                              approx_model=Llama_3_8B_MQA, spec_dec=True, acceptance_prob=0.8, input_len=0, max_throughput_tokens_per_second=np.inf, color="darkred"),
+                            TokenEconSettings(name="Long context", gpu=H100, model=DeepSeek_V3, input_len=100000, max_throughput_tokens_per_second=np.inf, color="blue"),
                             TokenEconSettings(name="Long context with speculative decoding", gpu=H100, model=DeepSeek_V3, \
-                                              approx_model=Llama_3_8B_MQA, spec_dec=True, acceptance_prob=0.8, input_len=100000, max_throughput_tokens_per_second=np.infty, color="darkblue")],
+                                              approx_model=Llama_3_8B_MQA, spec_dec=True, acceptance_prob=0.8, input_len=100000, max_throughput_tokens_per_second=np.inf, color="darkblue")],
                             "token_economics_deepseek_v3_comparison",
                             "Token economics of DeepSeek-V3 (8-bits) on different context lengths")
 
@@ -1588,112 +1588,111 @@ def preference_maximizing_settings(comparison, token_economics_results):
 #current_comparison = llama_comparison
 #current_comparison = quantization_comparison
 #current_comparison = spec_dec_comparison
-current_comparison = mistral_large_comparison
-#current_comparison = gpt_4_llama_comparison_with_spec_dec
-#current_comparison = deepseek_v3_context_len_comparison
-
-#current_comparison = tpu_test
-
-token_economics_results = pareto_fronts(current_comparison.comparison_list, token_latency_seconds_default, use_pp=True)
-#token_economics_results = pareto_fronts(current_comparison, section_2_2_token_latency_seconds)
-
-min_y = min([min(y_coords) for (x_coords, y_coords, gpu_counts, batch_sizes, mfu_values) in token_economics_results])
-max_y = max([max(y_coords) for (x_coords, y_coords, gpu_counts, batch_sizes, mfu_values) in token_economics_results])
-
-fig = plt.figure(figsize=(8, 6))
-plot_frontier_fits = False
-
-for (comparison_setting, (x_coords, y_coords, gpu_counts, batch_sizes, mfu_values)) in zip(current_comparison.comparison_list, token_economics_results):
-  plt.plot(x_coords, y_coords, label=comparison_setting.name, color=comparison_setting.color)
-  if comparison_setting.observed_perf != None:
-    x_l = []
-    y_l = []
-    for (x, y) in comparison_setting.observed_perf:
-      x_l.append(x)
-      y_l.append(y)
-
-    plt.scatter(x_l, y_l, color=comparison_setting.color)
-
-  # Fit the model
-  if plot_frontier_fits:
-    result = fit_lognormal_model(x_coords, y_coords)
-
-    if result.success:
-        A_fit, beta_fit, x_m_fit, log_sigma_fit = result.x
-        print("Fit succeeded for setting %s!" % (comparison_setting.name))
-        print(f"A        = {A_fit:.4f}")
-        print(f"beta     = {beta_fit:.4f}")
-        print(f"x_m      = {x_m_fit:.4f}")
-        print(f"sigma    = {np.exp(log_sigma_fit):.4f}")
-        plt.plot(x_coords, model(x_coords, A_fit, beta_fit, x_m_fit), label=comparison_setting.name, color=comparison_setting.color, linestyle="dashed")
-    else:
-        print("Fit failed for setting %s." % (comparison_setting.name))
-        print(result.message)
-
-  opt_index = np.argmax(x_coords)
-  print("Maximum throughput for %s: %.2f tokens/second/request (using %.2f GPUs at a batch size of %.2f)" % (comparison_setting.name, x_coords[opt_index], \
-                                                                                                             gpu_counts[opt_index], batch_sizes[opt_index]))
-print("\n")
-
-preference_max_results = preference_maximizing_settings(current_comparison.comparison_list, token_economics_results)
-for setting_name in preference_max_results:
-  results_dict = preference_max_results[setting_name]
-  print("Preferred throughput for %s: %.2f tokens/second/request at %.2f USD/million output tokens (using %.2f GPUs at a batch size of %.2f)" % (setting_name, results_dict["tokens_per_second_per_request"], \
-                                                                                                                                                 results_dict["price_dollars_per_million_tokens"], \
-                                                                                                                                                 results_dict["gpus_per_instance"], \
-                                                                                                                                                 results_dict["batch_size"]))
-
-plt.xlabel("Tokens per second per request")
-plt.ylabel("Cost per million tokens generated (dollars)")
-
-if current_comparison.plot_title == gpt_4_comparison_with_spec_dec.plot_title:
-  plt.hlines(y=10, xmin=71.6, xmax=181.9, color='black', linewidth=2, label='GPT-4o price performance range')
-
-plt.yscale("log")
-plt.gca().set_yticks([tick for tick in np.logspace(start=-10, stop=10, num=21, base=2) if tick <= max_y and tick >= min_y])
-plt.gca().get_yaxis().set_major_formatter(plt.FuncFormatter(lambda y, _: '%.3f' % y))
-
-plt.title(current_comparison.plot_title)
-plt.legend()
-
-plt.savefig(current_comparison.file_name + ".pdf")
-plt.savefig(current_comparison.file_name + ".png")
-plt.savefig(current_comparison.file_name + ".svg")
-plt.show()
-
-for (comparison_setting, (x_coords, y_coords, gpu_counts, batch_sizes, mfu_values)) in zip(current_comparison.comparison_list, token_economics_results):
-  plt.plot(x_coords, mfu_values, label=comparison_setting.name, color=comparison_setting.color)
-
-plt.xlabel("Tokens per second per request")
-plt.ylabel("MFU rate")
-
-plt.title(current_comparison.plot_title)
-plt.legend()
-
-plt.savefig("%s_mfu.pdf" % current_comparison.file_name)
-plt.savefig("%s_mfu.png" % current_comparison.file_name)
-plt.savefig("%s_mfu.svg" % current_comparison.file_name)
-plt.show()
-
-# In[22]:
-
-
-print(GPT_4)
-print(Mixtral_8x22B)
-print(Llama_3_405B)
-
-# In[5]:
-
-
-print(Mistral_Large_2.kv_cache_size_per_input_bytes)
-
-# In[330]:
-
-
-print(DeepSeek_V3.kv_cache_size_per_input_bytes * 1e5 * 1e6 / (3.3e12))
-print(DeepSeek_V3.arithmetic_cost_flop(1e5, 1) * 1e6/(1e15))
-
-# In[298]:
-
-
-np.logspace(0, 18 + np.log2(Llama_3_70B_8_bit.sparsity_factor), num=400, base=2)[:10]
+if __name__ == "__main__":
+    current_comparison = mistral_large_comparison
+    #current_comparison = gpt_4_llama_comparison_with_spec_dec
+    #current_comparison = deepseek_v3_context_len_comparison
+    
+    #current_comparison = tpu_test
+    
+    token_economics_results = pareto_fronts(current_comparison.comparison_list, token_latency_seconds_default, use_pp=True)
+    #token_economics_results = pareto_fronts(current_comparison, section_2_2_token_latency_seconds)
+    
+    min_y = min([min(y_coords) for (x_coords, y_coords, gpu_counts, batch_sizes, mfu_values) in token_economics_results])
+    max_y = max([max(y_coords) for (x_coords, y_coords, gpu_counts, batch_sizes, mfu_values) in token_economics_results])
+    
+    fig = plt.figure(figsize=(8, 6))
+    plot_frontier_fits = False
+    
+    for (comparison_setting, (x_coords, y_coords, gpu_counts, batch_sizes, mfu_values)) in zip(current_comparison.comparison_list, token_economics_results):
+      plt.plot(x_coords, y_coords, label=comparison_setting.name, color=comparison_setting.color)
+      if comparison_setting.observed_perf != None:
+        x_l = []
+        y_l = []
+        for (x, y) in comparison_setting.observed_perf:
+          x_l.append(x)
+          y_l.append(y)
+    
+        plt.scatter(x_l, y_l, color=comparison_setting.color)
+    
+      # Fit the model
+      if plot_frontier_fits:
+        result = fit_lognormal_model(x_coords, y_coords)
+    
+        if result.success:
+            A_fit, beta_fit, x_m_fit, log_sigma_fit = result.x
+            print("Fit succeeded for setting %s!" % (comparison_setting.name))
+            print(f"A        = {A_fit:.4f}")
+            print(f"beta     = {beta_fit:.4f}")
+            print(f"x_m      = {x_m_fit:.4f}")
+            print(f"sigma    = {np.exp(log_sigma_fit):.4f}")
+            plt.plot(x_coords, model(x_coords, A_fit, beta_fit, x_m_fit), label=comparison_setting.name, color=comparison_setting.color, linestyle="dashed")
+        else:
+            print("Fit failed for setting %s." % (comparison_setting.name))
+            print(result.message)
+    
+      opt_index = np.argmax(x_coords)
+      print("Maximum throughput for %s: %.2f tokens/second/request (using %.2f GPUs at a batch size of %.2f)" % (comparison_setting.name, x_coords[opt_index], \
+                                                                                                                 gpu_counts[opt_index], batch_sizes[opt_index]))
+    print("\n")
+    
+    preference_max_results = preference_maximizing_settings(current_comparison.comparison_list, token_economics_results)
+    for setting_name in preference_max_results:
+      results_dict = preference_max_results[setting_name]
+      print("Preferred throughput for %s: %.2f tokens/second/request at %.2f USD/million output tokens (using %.2f GPUs at a batch size of %.2f)" % (setting_name, results_dict["tokens_per_second_per_request"], \
+                                                                                                                                                     results_dict["price_dollars_per_million_tokens"], \
+                                                                                                                                                     results_dict["gpus_per_instance"], \
+                                                                                                                                                     results_dict["batch_size"]))
+    
+    plt.xlabel("Tokens per second per request")
+    plt.ylabel("Cost per million tokens generated (dollars)")
+    
+    if current_comparison.plot_title == gpt_4_comparison_with_spec_dec.plot_title:
+      plt.hlines(y=10, xmin=71.6, xmax=181.9, color='black', linewidth=2, label='GPT-4o price performance range')
+    
+    plt.yscale("log")
+    plt.gca().set_yticks([tick for tick in np.logspace(start=-10, stop=10, num=21, base=2) if tick <= max_y and tick >= min_y])
+    plt.gca().get_yaxis().set_major_formatter(plt.FuncFormatter(lambda y, _: '%.3f' % y))
+    
+    plt.title(current_comparison.plot_title)
+    plt.legend()
+    
+    plt.savefig(current_comparison.file_name + ".pdf")
+    plt.savefig(current_comparison.file_name + ".png")
+    plt.savefig(current_comparison.file_name + ".svg")
+    plt.show()
+    
+    for (comparison_setting, (x_coords, y_coords, gpu_counts, batch_sizes, mfu_values)) in zip(current_comparison.comparison_list, token_economics_results):
+      plt.plot(x_coords, mfu_values, label=comparison_setting.name, color=comparison_setting.color)
+    
+    plt.xlabel("Tokens per second per request")
+    plt.ylabel("MFU rate")
+    
+    plt.title(current_comparison.plot_title)
+    plt.legend()
+    
+    plt.savefig("%s_mfu.pdf" % current_comparison.file_name)
+    plt.savefig("%s_mfu.png" % current_comparison.file_name)
+    plt.savefig("%s_mfu.svg" % current_comparison.file_name)
+    plt.show()
+#    
+#        
+#        print(GPT_4)
+#        print(Mixtral_8x22B)
+#        print(Llama_3_405B)
+#        
+#        # In[5]:
+#        
+#        
+#        print(Mistral_Large_2.kv_cache_size_per_input_bytes)
+#        
+#        # In[330]:
+#        
+#        
+#        print(DeepSeek_V3.kv_cache_size_per_input_bytes * 1e5 * 1e6 / (3.3e12))
+#        print(DeepSeek_V3.arithmetic_cost_flop(1e5, 1) * 1e6/(1e15))
+#        
+#        # In[298]:
+#        
+#                
+#        np.logspace(0, 18 + np.log2(Llama_3_70B_8_bit.sparsity_factor), num=400, base=2)[:10]

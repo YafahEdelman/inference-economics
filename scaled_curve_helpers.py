@@ -1,0 +1,46 @@
+import matplotlib.pyplot as plt
+from inference_economics_notebook import (
+    H100,
+    DeepSeek_V3,
+    Llama_3_405B,
+    GPT_4,
+    TokenEconSettings,
+    ComparisonSettings,
+    pareto_fronts,
+    token_latency_seconds_default,
+    scale_model_for_cost_bandwidth,
+)
+
+
+def scale_to_gpt4o(model):
+    """Scale ``model`` so that the GPT-4o price/perf point lies on its frontier.
+    Returns the scaled model and scaling factor."""
+    scaled = scale_model_for_cost_bandwidth(
+        target_cost=8.0,
+        target_tokens_per_second=110.0,
+        base_model=model,
+        gpu=H100,
+    )
+    scale_factor = scaled.total_params / model.total_params
+    return scaled, scale_factor
+
+
+def curve_for_model(model, name, color):
+    settings = [TokenEconSettings(name=name, gpu=H100, model=model, input_len=0, color=color)]
+    comp = ComparisonSettings(settings, "tmp", "tmp")
+    x, y, _, _, _ = pareto_fronts(comp.comparison_list, token_latency_seconds_default, use_pp=True)[0]
+    return x, y
+
+
+def plot_curves(curve_data, output_file="gpt4o_scaled_curves.png"):
+    plt.figure(figsize=(8, 6))
+    for name, (x, y, color) in curve_data.items():
+        plt.plot(x, y, label=name, color=color)
+    plt.scatter([110], [8], color="black", label="GPT-4o API")
+    plt.xlabel("Tokens per second per request")
+    plt.ylabel("Cost per million tokens (USD)")
+    plt.yscale("log")
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(output_file)
+
