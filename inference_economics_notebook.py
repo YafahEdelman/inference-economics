@@ -1429,16 +1429,20 @@ def pareto_fronts(
     token_latency_seconds_func,
     use_pp: bool = False,
     overall_progress=None,
+    num_iterations: int = 1000,
 ):
   """Compute Pareto fronts for ``comparison_list``.
 
   If ``overall_progress`` is ``None`` a new :class:`tqdm` progress bar is
   created. Otherwise, the provided progress bar is updated.
+
+  ``num_iterations`` specifies how many sample points to evaluate for each
+  comparison, trading off accuracy for runtime.
   """
 
   token_economics_results = []
 
-  total_iterations = len(comparison_list) * 1000  # each comparison uses 1000 samples
+  total_iterations = len(comparison_list) * num_iterations  # each comparison uses num_iterations samples
   owns_progress = overall_progress is None
   if owns_progress:
     overall_progress = tqdm(total=total_iterations, desc="Overall progress", position=0)
@@ -1473,7 +1477,12 @@ def pareto_fronts(
     gpu_counts = []
     batch_sizes = []
 
-    token_latency_seconds_range = np.min(token_latency_seconds_array) * np.logspace(0, 2, base=10, num=1000)  # ranges from max speed/100 to max speed
+    token_latency_seconds_range = np.min(token_latency_seconds_array) * np.logspace(
+        0,
+        2,
+        base=10,
+        num=num_iterations,
+    )  # ranges from max speed/100 to max speed
 
     for token_latency_seconds_sample in tqdm(
         token_latency_seconds_range,

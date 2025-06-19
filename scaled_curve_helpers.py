@@ -25,11 +25,19 @@ def scale_to_gpt4o(model):
     return scaled, scale_factor
 
 
-def curve_for_model(model, name, color, overall_progress=None):
+def curve_for_model(
+    model,
+    name,
+    color,
+    overall_progress=None,
+    num_iterations=1000,
+):
     """Return the cost/throughput curve for ``model``.
 
     If ``overall_progress`` is provided, it will be updated by
     :func:`pareto_fronts` to allow tracking progress across multiple models.
+    ``num_iterations`` controls how many samples :func:`pareto_fronts` uses,
+    trading off accuracy for runtime.
     """
 
     settings = [TokenEconSettings(name=name, gpu=H100, model=model, input_len=0, color=color)]
@@ -39,6 +47,7 @@ def curve_for_model(model, name, color, overall_progress=None):
         token_latency_seconds_default,
         use_pp=True,
         overall_progress=overall_progress,
+        num_iterations=num_iterations,
     )[0]
     return x, y
 
