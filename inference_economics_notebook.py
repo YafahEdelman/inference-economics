@@ -1143,7 +1143,10 @@ def scale_model_for_cost_bandwidth(target_cost: float,
                                    input_len: int = 0,
                                    spec_dec: bool = False,
                                    acceptance_prob: float = 1.0,
-                                   depth_exponent: float = 1/3) -> Model:
+                                   depth_exponent: float = 1/3,
+                                   *,
+                                   num_iterations: int = 1000,
+                                   grid_size: int = 400) -> Model:
    """Return a scaled version of ``base_model`` such that ``(target_tokens_per_second,
    target_cost)`` lies on its cost-throughput frontier.
 
@@ -1167,6 +1170,10 @@ def scale_model_for_cost_bandwidth(target_cost: float,
        Speculative decoding acceptance probability.
    depth_exponent : float
        Depth exponent for ``scale_model``.
+   num_iterations : int, optional
+       Number of samples for :func:`pareto_fronts`. Smaller values run faster.
+   grid_size : int, optional
+       Resolution of the batch size/GPU count grid for :func:`pareto_fronts`.
 
    Returns
    -------
@@ -1187,7 +1194,9 @@ def scale_model_for_cost_bandwidth(target_cost: float,
       comp = ComparisonSettings(settings, "tmp", "tmp")
       x_coords, y_coords, _, _, _ = pareto_fronts(comp.comparison_list,
                                                   token_latency_seconds_default,
-                                                  use_pp=True)[0]
+                                                  use_pp=True,
+                                                  num_iterations=num_iterations,
+                                                  grid_size=grid_size)[0]
 
       if target_tokens_per_second < np.min(x_coords) or target_tokens_per_second > np.max(x_coords):
          return float("inf")
@@ -1197,7 +1206,7 @@ def scale_model_for_cost_bandwidth(target_cost: float,
    def objective(scale_factor: float) -> float:
       return predicted_cost(scale_factor) - target_cost
 
-   result = root_scalar(objective, bracket=[0.1, 10], method="bisect")
+   result = root_scalar(objective, bracket=[0.1, 10], method="bisect", maxiter=50)
 
    if not result.converged:
       raise RuntimeError("Could not find scale factor for the requested point")
@@ -1430,6 +1439,7 @@ def pareto_fronts(
     use_pp: bool = False,
     overall_progress=None,
     num_iterations: int = 1000,
+    grid_size: int = 400,
 ):
   """Compute Pareto fronts for ``comparison_list``.
 
@@ -1437,7 +1447,8 @@ def pareto_fronts(
   created. Otherwise, the provided progress bar is updated.
 
   ``num_iterations`` specifies how many sample points to evaluate for each
-  comparison, trading off accuracy for runtime.
+  comparison, trading off accuracy for runtime. ``grid_size`` controls the
+  resolution of the batch size/GPU count search grid.
   """
 
   token_economics_results = []
@@ -1456,8 +1467,8 @@ def pareto_fronts(
     # min_num_of_gpus = np.maximum(1, model.total_params*model.precision_bytes/gpu.hbm_size_bytes)
     min_num_of_gpus = model.total_params*model.weight_precision_bytes/gpu.hbm_size_bytes
 
-    batch_size_range = np.logspace(0, 18 + np.log2(model.sparsity_factor), num=400, base=2)
-    n_gpu_range = np.logspace(np.log2(min_num_of_gpus), 18, num=400, base=2)
+    batch_size_range = np.logspace(0, 18 + np.log2(model.sparsity_factor), num=grid_size, base=2)
+    n_gpu_range = np.logspace(np.log2(min_num_of_gpus), 18, num=grid_size, base=2)
 
     batch_size_array = np.transpose(np.tile(batch_size_range, (len(n_gpu_range), 1)))
     n_gpu_array = np.tile(n_gpu_range, (len(batch_size_range), 1))

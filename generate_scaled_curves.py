@@ -22,6 +22,12 @@ def main() -> None:
         default=1000,
         help="Number of samples to use when computing Pareto fronts",
     )
+    parser.add_argument(
+        "--grid-size",
+        type=int,
+        default=400,
+        help="Resolution of batch size/GPU count search grid",
+    )
     args = parser.parse_args()
 
     scaled_info = {}
@@ -34,7 +40,11 @@ def main() -> None:
     )
 
     for name, (model, color) in tqdm(models.items(), desc="Models"):
-        scaled, factor = scale_to_gpt4o(model)
+        scaled, factor = scale_to_gpt4o(
+            model,
+            num_iterations=iterations_per_model,
+            grid_size=args.grid_size,
+        )
         scalings[name] = (factor, scaled.total_params)
         x, y = curve_for_model(
             scaled,
@@ -42,6 +52,7 @@ def main() -> None:
             color,
             overall_progress=overall_progress,
             num_iterations=iterations_per_model,
+            grid_size=args.grid_size,
         )
         scaled_info[name] = (x, y, color)
 
