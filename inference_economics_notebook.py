@@ -8,7 +8,7 @@ import pandas as pd
 import numpy as np
 import statsmodels.api as sm
 import matplotlib.pyplot as plt
-from scipy.optimize import minimize
+from scipy.optimize import minimize, root_scalar
 from sympy import divisors
 from dataclasses import dataclass
 import math
@@ -1128,6 +1128,75 @@ def search_for_model(base_model: Model, approx_model: Model, gpu: GPU, acceptanc
          low = mid
 
    return current_model, N_GPU, batch_size
+
+def scale_model_for_cost_bandwidth(target_cost: float,
+                                   target_tokens_per_second: float,
+                                   base_model: Model,
+                                   gpu: GPU = None,
+                                   approx_model: Model | None = None,
+                                   input_len: int = 0,
+                                   spec_dec: bool = False,
+                                   acceptance_prob: float = 1.0,
+                                   depth_exponent: float = 1/3) -> Model:
+   """Return a scaled version of ``base_model`` such that ``(target_tokens_per_second,
+   target_cost)`` lies on its cost-throughput frontier.
+
+   Parameters
+   ----------
+   target_cost : float
+       Desired price in dollars per million output tokens.
+   target_tokens_per_second : float
+       Desired throughput in tokens per second per request.
+   base_model : Model
+       Model to scale.
+   gpu : GPU, optional
+       Hardware assumption used to compute the frontier. Defaults to ``H100``.
+   approx_model : Model, optional
+       Model used for speculative decoding if ``spec_dec`` is ``True``.
+   input_len : int
+       Input context length.
+   spec_dec : bool
+       Whether to use speculative decoding latency functions.
+   acceptance_prob : float
+       Speculative decoding acceptance probability.
+   depth_exponent : float
+       Depth exponent for ``scale_model``.
+
+   Returns
+   -------
+   Model
+       Scaled model matching the target point.
+   """
+
+   if gpu is None:
+      gpu = H100
+
+   def predicted_cost(scale_factor: float) -> float:
+      scaled = scale_model(base_model, scale_factor, depth_exponent=depth_exponent)
+      settings = [TokenEconSettings(name="tmp", gpu=gpu, model=scaled,
+                                    approx_model=approx_model,
+                                    input_len=input_len,
+                                    spec_dec=spec_dec,
+                                    acceptance_prob=acceptance_prob)]
+      comp = ComparisonSettings(settings, "tmp", "tmp")
+      x_coords, y_coords, _, _, _ = pareto_fronts(comp.comparison_list,
+                                                  token_latency_seconds_default,
+                                                  use_pp=True)[0]
+
+      if target_tokens_per_second < np.min(x_coords) or target_tokens_per_second > np.max(x_coords):
+         return float("inf")
+
+      return np.interp(target_tokens_per_second, x_coords, y_coords)
+
+   def objective(scale_factor: float) -> float:
+      return predicted_cost(scale_factor) - target_cost
+
+   result = root_scalar(objective, bracket=[0.1, 10], method="bisect")
+
+   if not result.converged:
+      raise RuntimeError("Could not find scale factor for the requested point")
+
+   return scale_model(base_model, result.root, depth_exponent=depth_exponent)
 
 # ## Model testing cell
 # 
