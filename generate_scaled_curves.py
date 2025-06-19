@@ -15,11 +15,22 @@ models = {
 
 scaled_info = {}
 scalings = {}
+
+# ``pareto_fronts`` iterates over 1000 samples for each model. Use this value
+# to build an overall progress bar across all models.
+TOTAL_ITERATIONS_PER_MODEL = 1000
+overall_progress = tqdm(
+    total=TOTAL_ITERATIONS_PER_MODEL * len(models),
+    desc="Overall progress",
+)
+
 for name, (model, color) in tqdm(models.items(), desc="Models"):
     scaled, factor = scale_to_gpt4o(model)
     scalings[name] = (factor, scaled.total_params)
-    x, y = curve_for_model(scaled, name, color)
+    x, y = curve_for_model(scaled, name, color, overall_progress)
     scaled_info[name] = (x, y, color)
+
+overall_progress.close()
 
 plot_curves(scaled_info)
 
