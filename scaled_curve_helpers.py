@@ -13,7 +13,7 @@ from inference_economics_notebook import (
 
 
 def scale_to_gpt4o(model):
-    """Scale ``model`` so that the GPT-4o price/perf point lies on its frontier.
+    """Scale ``model`` so that the GPT-4.1 price/perf point lies on its frontier.
     Returns the scaled model and scaling factor."""
     scaled = scale_model_for_cost_bandwidth(
         target_cost=8.0,
@@ -36,7 +36,7 @@ def plot_curves(curve_data, output_file="gpt4o_scaled_curves.png"):
     plt.figure(figsize=(8, 6))
     for name, (x, y, color) in curve_data.items():
         plt.plot(x, y, label=name, color=color)
-    plt.scatter([110], [8], color="black", label="GPT-4o API")
+    plt.scatter([110], [8], color="black", label="GPT-4.1 API")
     plt.xlabel("Tokens per second per request")
     plt.ylabel("Cost per million tokens (USD)")
     plt.yscale("log")
